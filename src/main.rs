@@ -15,12 +15,13 @@ pub enum AddressingMode {
     Absolute_Y,
     Indirect_X,
     Indirect_Y,
+    Relative,
     NoneAddressing,
 }
 
 pub struct OpCode {
     pub code: u8,
-    #[cfg(debug_assertions)]
+    //    #[cfg(debug_assertions)]
     pub mnemonic: &'static str,
     pub len: u8,
     pub cycles: u8,
@@ -30,14 +31,15 @@ pub struct OpCode {
 impl OpCode {
     fn new(
         code: u8,
-        #[cfg(debug_assertions)] mnemonic: &'static str,
+        //#[cfg(debug_assertions)]
+        mnemonic: &'static str,
         len: u8,
         cycles: u8,
         addressing_mode: AddressingMode,
     ) -> Self {
         Self {
             code,
-            #[cfg(debug_assertions)]
+            //           #[cfg(debug_assertions)]
             mnemonic,
             len,
             cycles,
@@ -46,7 +48,7 @@ impl OpCode {
     }
 }
 
-#[cfg(debug_assertions)]
+//#[cfg(debug_assertions)]
 impl From<(u8, &'static str, u8, u8, AddressingMode)> for OpCode {
     fn from(
         (code, mnemonic, len, cycles, addressing_mode): (u8, &'static str, u8, u8, AddressingMode),
@@ -61,19 +63,150 @@ impl From<(u8, &'static str, u8, u8, AddressingMode)> for OpCode {
     }
 }
 
-#[cfg(not(debug_assertions))]
-impl From<(u8, u8, u8, AddressingMode)> for OpCode {
-    fn from((code, len, cycles, addressing_mode): (u8, u8, u8, AddressingMode)) -> Self {
-        Self {
-            code,
-            len,
-            cycles,
-            addressing_mode,
-        }
-    }
-}
+//#[cfg(not(debug_assertions))]
+//impl From<(u8, u8, u8, AddressingMode)> for OpCode {
+//    fn from((code, len, cycles, addressing_mode): (u8, u8, u8, AddressingMode)) -> Self {
+//        Self {
+//            code,
+//            len,
+//            cycles,
+//            addressing_mode,
+//        }
+//    }
+//}
 
-static OPCODES: LazyLock<HashMap<u8, OpCode>> = LazyLock::new(|| HashMap::from([]));
+static OPCODES: LazyLock<Vec<OpCode>> = LazyLock::new(|| {
+    [
+        // (code  xxx, len,cycles, addressing_mode)
+        //
+        // ADC - Add with Carry
+        (0x69, "ADC", 2, 2, AddressingMode::Immediate),
+        (0x65, "ADC", 2, 2, AddressingMode::ZeroPage),
+        (0x75, "ADC", 2, 2, AddressingMode::ZeroPage_X),
+        (0x6D, "ADC", 2, 3, AddressingMode::Absolute),
+        (0x7D, "ADC", 2, 3, AddressingMode::Absolute_X),
+        (0x79, "ADC", 2, 3, AddressingMode::Absolute_Y),
+        (0x61, "ADC", 2, 2, AddressingMode::Indirect_X),
+        (0x71, "ADC", 2, 2, AddressingMode::Indirect_Y),
+        //
+        // AND - Logical AND
+        (0x29, "AND", 2, 2, AddressingMode::Immediate),
+        (0x25, "AND", 2, 3, AddressingMode::ZeroPage),
+        (0x35, "AND", 2, 4, AddressingMode::ZeroPage_X),
+        (0x2D, "AND", 3, 4, AddressingMode::Absolute),
+        (
+            0x3D,
+            "AND",
+            3,
+            4, // +1 if page crossed
+            AddressingMode::Absolute_X,
+        ),
+        (
+            0x39,
+            "AND",
+            3,
+            4, // +1 if page crossed
+            AddressingMode::Absolute_Y,
+        ),
+        (0x21, "AND", 2, 6, AddressingMode::Indirect_X),
+        (
+            0x31,
+            "AND",
+            2,
+            5, // +1 if page crossed
+            AddressingMode::Indirect_Y,
+        ),
+        //
+        // ASL - Arithmetic Shift Left
+        (0x0A, "ASL", 1, 2, AddressingMode::Immediate),
+        (0x06, "ASL", 2, 5, AddressingMode::ZeroPage),
+        (0x16, "ASL", 2, 6, AddressingMode::ZeroPage_X),
+        (0x0E, "ASL", 3, 6, AddressingMode::Absolute),
+        (0x1E, "ASL", 3, 7, AddressingMode::Absolute_X),
+        //
+        // BCC - Branch if Carry Clear
+        (
+            0x90,
+            "BCC",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+        //
+        // BCS - Branch if Carry Set
+        (
+            0xB0,
+            "BCS",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+        //
+        // BEQ - Branch if Equal
+        (
+            0xF0,
+            "BEQ",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+        //
+        // BIT - Bit Test
+        (0x24, "BIT", 2, 3, AddressingMode::ZeroPage),
+        (0x2C, "BIT", 3, 4, AddressingMode::Absolute),
+        //
+        // BMI - Branch if Minus
+        (
+            0x30,
+            "BMI",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+        //
+        // BNE - Branch if Not Equal
+        (
+            0xD0,
+            "BNE",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+        //
+        // BPL - Branch if Positive
+        (
+            0x10,
+            "BPL",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+        //
+        // BRK - Force Interrupt
+        (0x00, "BRK", 1, 7, AddressingMode::Implied),
+        //
+        // BVC - Branch if Overflow Clear
+        (
+            0x50,
+            "BVC",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+        //
+        // BVS - Brach if Overflow Set
+        (
+            0x70,
+            "BVS",
+            2,
+            2, // +1 if branch succeeds, +2 if to a new page
+            AddressingMode::Relative,
+        ),
+    ]
+    .into_iter()
+    .map(OpCode::from)
+    .collect()
+});
 
 // https://bugzmanov.github.io/nes_ebook/chapter_3_1.html
 // #[derive(Default)]
@@ -147,6 +280,9 @@ impl CPU {
                 let deref = deref_base.wrapping_add(self.register_y as u16);
                 deref
             }
+
+            // not sure about this one check it again TODO
+            &AddressingMode::Relative => self.mem_read_u16(self.program_counter),
 
             AddressingMode::NoneAddressing => {
                 panic!("{mode:?} mode is not supported");
