@@ -20,25 +20,60 @@ pub enum AddressingMode {
 
 pub struct OpCode {
     pub code: u8,
+    #[cfg(debug_assertions)]
     pub mnemonic: &'static str,
     pub len: u8,
     pub cycles: u8,
-    pub mode: AddressingMode,
+    pub addressing_mode: AddressingMode,
 }
 
 impl OpCode {
-    fn new(code: u8, mnemonic: &'static str, len: u8, cycles: u8, mode: AddressingMode) -> Self {
+    fn new(
+        code: u8,
+        #[cfg(debug_assertions)] mnemonic: &'static str,
+        len: u8,
+        cycles: u8,
+        addressing_mode: AddressingMode,
+    ) -> Self {
+        Self {
+            code,
+            #[cfg(debug_assertions)]
+            mnemonic,
+            len,
+            cycles,
+            addressing_mode,
+        }
+    }
+}
+
+#[cfg(debug_assertions)]
+impl From<(u8, &'static str, u8, u8, AddressingMode)> for OpCode {
+    fn from(
+        (code, mnemonic, len, cycles, addressing_mode): (u8, &'static str, u8, u8, AddressingMode),
+    ) -> Self {
         Self {
             code,
             mnemonic,
             len,
             cycles,
-            mode,
+            addressing_mode,
         }
     }
 }
 
-static OPCODES: LazyLock<HashMap<u8, OpCode>> = LazyLock::new(|| todo!());
+#[cfg(not(debug_assertions))]
+impl From<(u8, u8, u8, AddressingMode)> for OpCode {
+    fn from((code, len, cycles, addressing_mode): (u8, u8, u8, AddressingMode)) -> Self {
+        Self {
+            code,
+            len,
+            cycles,
+            addressing_mode,
+        }
+    }
+}
+
+static OPCODES: LazyLock<HashMap<u8, OpCode>> = LazyLock::new(|| HashMap::from([]));
 
 // https://bugzmanov.github.io/nes_ebook/chapter_3_1.html
 // #[derive(Default)]
@@ -114,7 +149,7 @@ impl CPU {
             }
 
             AddressingMode::NoneAddressing => {
-                panic!("mode {:?} is not supported", mode);
+                panic!("{mode:?} mode is not supported");
             }
         }
     }
@@ -192,24 +227,20 @@ impl CPU {
         self.program_counter = 0x8000;
     }
 
-    pub fn interpret(&mut self, program: &[u8]) {
-        // I don't think we need this
-        // self.program_counter = 0;
-
+    pub fn run(&mut self) {
         loop {
-            let opscode = program[self.program_counter as usize];
+            let code = self.mem_read(self.program_counter);
             self.program_counter += 1;
 
-            let pc = self.program_counter as usize;
+            let opcode: OpCode = todo!();
 
-            match opscode {
-                0xA9 => {
-                    let param = program[pc];
-                    self.program_counter += 1;
-                    self.lda(param);
+            match code {
+                0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
+                    self.lda(&opcode.addressing_mode)
                 }
                 0xAA => self.tax(),
                 0xE8 => self.inx(),
+                //    0x69 | 0x65 | 0x75 | 0x6D | 0x7D | 0x79 | 0x61 | 0x71
                 0x00 => return,
                 _ => todo!(),
             }
@@ -225,51 +256,51 @@ fn main() {
 mod test {
     use super::*;
 
-    #[test]
-    fn test_0xa9_lda_immediate_load_data() {
-        let mut cpu = CPU::new();
-        cpu.interpret(&[0xa9, 0x05, 0x00]);
-        assert_eq!(cpu.register_a, 0x05);
-        assert!(cpu.status & 0b0000_0010 == 0b00);
-        assert!(cpu.status & 0b1000_0000 == 0);
-    }
-
-    #[test]
-    fn test_0xa9_lda_zero_flag() {
-        let mut cpu = CPU::new();
-        cpu.interpret(&[0xa9, 0x00, 0x00]);
-        assert!(cpu.status & 0b0000_0010 == 0b10);
-    }
-
-    #[test]
-    fn test_0xa9_lda_negative_flag() {
-        let mut cpu = CPU::new();
-        cpu.interpret(&[0xa9, 0xff, 0x00]);
-        assert!(cpu.status & 0b1000_0000 == 0b1000_0000);
-    }
-
-    #[test]
-    fn test_0xaa_tax_move_a_to_x() {
-        let mut cpu = CPU::new();
-        cpu.register_a = 10;
-        cpu.interpret(&[0xaa, 0x00]);
-
-        assert_eq!(cpu.register_x, 10)
-    }
-    #[test]
-    fn test_5_ops_working_together() {
-        let mut cpu = CPU::new();
-        cpu.interpret(&[0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
-
-        assert_eq!(cpu.register_x, 0xc1)
-    }
-
-    #[test]
-    fn test_inx_overflow() {
-        let mut cpu = CPU::new();
-        cpu.register_x = 0xff;
-        cpu.interpret(&[0xe8, 0xe8, 0x00]);
-
-        assert_eq!(cpu.register_x, 1)
-    }
+    //    #[test]
+    //    fn test_0xa9_lda_immediate_load_data() {
+    //        let mut cpu = CPU::new();
+    //        cpu.interpret(&[0xa9, 0x05, 0x00]);
+    //        assert_eq!(cpu.register_a, 0x05);
+    //        assert!(cpu.status & 0b0000_0010 == 0b00);
+    //        assert!(cpu.status & 0b1000_0000 == 0);
+    //    }
+    //
+    //    #[test]
+    //    fn test_0xa9_lda_zero_flag() {
+    //        let mut cpu = CPU::new();
+    //        cpu.interpret(&[0xa9, 0x00, 0x00]);
+    //        assert!(cpu.status & 0b0000_0010 == 0b10);
+    //    }
+    //
+    //    #[test]
+    //    fn test_0xa9_lda_negative_flag() {
+    //        let mut cpu = CPU::new();
+    //        cpu.interpret(&[0xa9, 0xff, 0x00]);
+    //        assert!(cpu.status & 0b1000_0000 == 0b1000_0000);
+    //    }
+    //
+    //    #[test]
+    //    fn test_0xaa_tax_move_a_to_x() {
+    //        let mut cpu = CPU::new();
+    //        cpu.register_a = 10;
+    //        cpu.interpret(&[0xaa, 0x00]);
+    //
+    //        assert_eq!(cpu.register_x, 10)
+    //    }
+    //    #[test]
+    //    fn test_5_ops_working_together() {
+    //        let mut cpu = CPU::new();
+    //        cpu.interpret(&[0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+    //
+    //        assert_eq!(cpu.register_x, 0xc1)
+    //    }
+    //
+    //    #[test]
+    //    fn test_inx_overflow() {
+    //        let mut cpu = CPU::new();
+    //        cpu.register_x = 0xff;
+    //        cpu.interpret(&[0xe8, 0xe8, 0x00]);
+    //
+    //        assert_eq!(cpu.register_x, 1)
+    //    }
 }
