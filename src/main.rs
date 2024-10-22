@@ -202,6 +202,56 @@ static OPCODES: LazyLock<Vec<OpCode>> = LazyLock::new(|| {
             2, // +1 if branch succeeds, +2 if to a new page
             AddressingMode::Relative,
         ),
+        //
+        // CLC - Clear Carry Flag
+        (0x18, "CLC", 1, 2, AddressingMode::Implied),
+        //
+        // CLD - Clear Decimal Mode
+        (0xD8, "CLD", 1, 2, AddressingMode::Implied),
+        //
+        // CLI - Clear Interrupt Disable
+        (0x58, "CLI", 1, 2, AddressingMode::Implied),
+        //
+        // CLV - Clear Overflow Flag
+        (0xB8, "CLV", 1, 2, AddressingMode::Implied),
+        //
+        // CMP - Compare
+        (0xC9, "CMP", 2, 2, AddressingMode::Immediate),
+        (0xC5, "CMP", 2, 3, AddressingMode::ZeroPage),
+        (0xD5, "CMP", 2, 4, AddressingMode::ZeroPage_X),
+        (0xCD, "CMP", 3, 4, AddressingMode::Absolute),
+        (
+            0xDD,
+            "CMP",
+            3,
+            4, // +1 if page crossed
+            AddressingMode::Absolute_X,
+        ),
+        (
+            0xD9,
+            "CMP",
+            3,
+            4, // +1 if page crossed
+            AddressingMode::Absolute_Y,
+        ),
+        (0xC1, "CMP", 2, 6, AddressingMode::Indirect_X),
+        (
+            0xD1,
+            "CMP",
+            2,
+            5, // +1 if page crossed
+            AddressingMode::Indirect_Y,
+        ),
+        //
+        // CPX - Compare X Register
+        (0xE0, "CPX", 2, 2, AddressingMode::Immediate),
+        (0xE4, "CPX", 2, 3, AddressingMode::ZeroPage),
+        (0xEC, "CPX", 3, 4, AddressingMode::Absolute),
+        //
+        // CPY - Compare Y Register
+        (0xC0, "CPY", 2, 2, AddressingMode::Immediate),
+        (0xC4, "CPY", 2, 3, AddressingMode::ZeroPage),
+        (0xCC, "CPY", 3, 4, AddressingMode::Absolute),
     ]
     .into_iter()
     .map(OpCode::from)
